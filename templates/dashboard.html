@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${t['dashboard']} + ' - ' + ${t['brand']})}"></head>
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    <div th:replace="~{fragments/layout :: navbar('dashboard')}"></div>
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <main class="flex-grow-1">
+        <div class="container-fluid px-lg-4 mt-3">
+
+            <!-- Top Banner & Field Selector -->
+            <div class="row align-items-center mb-4 g-3">
+                <div class="col-md-7">
+                    <h3 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                        <span><span th:text="${t['welcome']}">Welcome</span>, <span th:text="${currentFarmer != null ? currentFarmer.name : 'Farmer'}">Farmer</span>!</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 rounded-pill px-3 py-1">
+                            <i class="fa-solid fa-seedling me-1"></i> Active Farm
+                        </span>
+                    </h3>
+                    <p class="text-muted mb-0 small">
+                        <i class="fa-solid fa-location-dot text-danger me-1"></i> 
+                        <span th:text="${activeField != null ? activeField.location : (currentFarmer != null ? currentFarmer.location : 'Location')}">Location</span>
+                        &nbsp;|&nbsp; Continuous agricultural IoT telemetry & AI inference cockpit.
+                    </p>
+                </div>
+
+                <div class="col-md-5 d-flex flex-wrap justify-content-md-end align-items-center gap-2">
+                    <!-- Field Switcher -->
+                    <div class="dropdown" th:if="${fields != null and !fields.isEmpty()}">
+                        <button class="btn btn-outline-secondary dropdown-toggle bg-white shadow-sm" type="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-map me-1 text-success"></i> 
+                            <strong th:text="${activeField != null ? activeField.fieldName : 'Select Field'}">Select Field</strong>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><h6 class="dropdown-header">Select Farm Plot</h6></li>
+                            <li th:each="f : ${fields}">
+                                <a class="dropdown-item d-flex justify-content-between align-items-center"
+                                   th:classappend="${activeField != null and activeField.id == f.id ? 'active' : ''}" 
+                                   th:href="@{/dashboard(fieldId=${f.id})}">
+                                    <span th:text="${f.fieldName}">Field</span>
+                                    <span class="badge bg-light text-dark border ms-2" th:text="${f.area + ' ac'}">1 ac</span>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-primary" th:href="@{/fields}"><i class="fa-solid fa-plus me-1"></i> Add New Field</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- IoT Sensor Simulation Button -->
+                    <button th:if="${activeField != null}" id="simulateSensorBtn" class="btn btn-primary shadow-sm" th:onclick="'triggerSensorSimulation(' + ${activeField.id} + ')'">
+                        <i class="fa-solid fa-satellite-dish me-1"></i> <span id="btnText" th:text="${t['simulate_sensors']}">Simulate IoT Sensor Reading</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty state if no fields -->
+            <div th:if="${fields == null or fields.isEmpty()}" class="card p-5 text-center my-4">
+                <i class="fa-solid fa-tractor text-muted fs-1 mb-3"></i>
+                <h4>No fields registered yet</h4>
+                <p class="text-muted">Register your first farm plot to enable sensor telemetry and AI recommendations.</p>
+                <div>
+                    <a th:href="@{/fields}" class="btn btn-agri"><i class="fa-solid fa-plus me-1"></i> Register Field</a>
+                </div>
+            </div>
+
+            <div th:if="${fields != null and !fields.isEmpty() and activeField != null}">
+
+                <!-- Metric Telemetry Cards -->
+                <div class="row g-3 mb-4">
+                    <!-- Soil Moisture -->
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card metric-card moisture h-100 p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider" th:text="${t['soil_moisture']}">Soil Moisture</span>
+                                    <h2 class="fw-bold text-dark mt-1 mb-0" id="valMoisture" th:text="${(latestSensor != null ? latestSensor.soilMoisture : 28.0) + '%'}">28.0%</h2>
+                                </div>
+                                <div class="metric-icon bg-info-subtle text-info">
+                                    <i class="fa-solid fa-droplet"></i>
+                                </div>
+                            </div>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div id="barMoisture" class="progress-bar"
+                                     th:classappend="${latestSensor != null and latestSensor.soilMoisture < 25 ? 'bg-danger' : (latestSensor != null and latestSensor.soilMoisture > 45 ? 'bg-warning' : 'bg-info')}"
+                                     role="progressbar" 
+                                     th:style="'width: ' + ${latestSensor != null ? latestSensor.soilMoisture : 28} + '%;'"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2 small text-muted">
+                                <span id="zoneMoisture">
+                                    <span th:if="${latestSensor != null and latestSensor.soilMoisture < 25}" class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> Low (Stress)</span>
+                                    <span th:if="${latestSensor != null and latestSensor.soilMoisture > 45}" class="text-warning fw-bold"><i class="fa-solid fa-circle-info"></i> High / Saturated</span>
+                                    <span th:if="${latestSensor != null and latestSensor.soilMoisture >= 25 and latestSensor.soilMoisture <= 45}" class="text-success fw-bold"><i class="fa-solid fa-circle-check"></i> Optimal</span>
+                                </span>
+                                <span>Target: 25-42%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Temperature -->
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card metric-card temp h-100 p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider" th:text="${t['temp']}">Temperature</span>
+                                    <h2 class="fw-bold text-dark mt-1 mb-0" id="valTemp" th:text="${(latestSensor != null ? latestSensor.temperature : 28.5) + '°C'}">28.5°C</h2>
+                                </div>
+                                <div class="metric-icon bg-warning-subtle text-warning">
+                                    <i class="fa-solid fa-temperature-half"></i>
+                                </div>
+                            </div>
+                            <div class="text-muted small mt-2">
+                                <i class="fa-solid fa-cloud-sun me-1"></i> Ambient thermal index
+                            </div>
+                            <div class="small text-muted mt-2">
+                                Soil Type: <strong class="text-dark" th:text="${activeField.soilType}">Loamy</strong> (pH <span th:text="${activeField.soilPh}">6.5</span>)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Humidity -->
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card metric-card humidity h-100 p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider" th:text="${t['humidity']}">Humidity</span>
+                                    <h2 class="fw-bold text-dark mt-1 mb-0" id="valHumidity" th:text="${(latestSensor != null ? latestSensor.humidity : 65.0) + '%'}">65.0%</h2>
+                                </div>
+                                <div class="metric-icon bg-primary-subtle text-primary">
+                                    <i class="fa-solid fa-smog"></i>
+                                </div>
+                            </div>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div id="barHumidity" class="progress-bar bg-primary" role="progressbar" 
+                                     th:style="'width: ' + ${latestSensor != null ? latestSensor.humidity : 65} + '%;'"></div>
+                            </div>
+                            <div class="text-muted small mt-2">
+                                Relative atmospheric vapor level
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- N-P-K Nutrients -->
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="card metric-card nutrients h-100 p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Soil N-P-K Levels</span>
+                                    <div class="d-flex gap-2 mt-1">
+                                        <span class="badge bg-success" id="valN" th:text="${'N: ' + (latestSensor != null ? #numbers.formatDecimal(latestSensor.nitrogen, 0, 0) : '60')}">N: 60</span>
+                                        <span class="badge bg-primary" id="valP" th:text="${'P: ' + (latestSensor != null ? #numbers.formatDecimal(latestSensor.phosphorus, 0, 0) : '45')}">P: 45</span>
+                                        <span class="badge bg-warning text-dark" id="valK" th:text="${'K: ' + (latestSensor != null ? #numbers.formatDecimal(latestSensor.potassium, 0, 0) : '40')}">K: 40</span>
+                                    </div>
+                                </div>
+                                <div class="metric-icon bg-success-subtle text-success">
+                                    <i class="fa-solid fa-flask-vial"></i>
+                                </div>
+                            </div>
+                            <div class="text-muted small mt-2">
+                                Available macro-nutrients (mg/kg)
+                            </div>
+                            <div class="small text-muted mt-2">
+                                Telemetry: <span id="valTime" class="fw-semibold text-dark">Live Connected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Control & Analytics Row -->
+                <div class="row g-4 mb-4">
+                    
+                    <!-- Smart Irrigation Decision Status Card -->
+                    <div class="col-lg-7">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-header d-flex justify-content-between align-items-center bg-white">
+                                <span class="fw-bold text-dark"><i class="fa-solid fa-faucet-drip text-primary me-2"></i> <span th:text="${t['irrigation']}">Smart Irrigation</span> Decision Panel</span>
+                                <a th:href="@{/smart-irrigation(fieldId=${activeField.id})}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                    Open Full Console <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                            <div class="card-body p-4">
+                                <div th:if="${latestIrrigation != null}">
+                                    <div class="d-flex flex-column flex-sm-row align-items-center gap-4 mb-4 p-3 bg-light rounded-4">
+                                        <!-- Pump indicator -->
+                                        <div class="pump-indicator" 
+                                             th:classappend="${latestIrrigation.irrigationStatus == 'ON' ? 'pump-active' : (latestIrrigation.irrigationStatus == 'POSTPONE' ? 'pump-delay' : 'pump-idle')}">
+                                            <i class="fa-solid" 
+                                               th:classappend="${latestIrrigation.irrigationStatus == 'ON' ? 'fa-water' : (latestIrrigation.irrigationStatus == 'POSTPONE' ? 'fa-cloud-rain' : 'fa-power-off')}"></i>
+                                        </div>
+                                        <div class="flex-grow-1 text-center text-sm-start">
+                                            <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-sm-start gap-2 mb-1">
+                                                <h5 class="fw-bold mb-0">System Recommendation:</h5>
+                                                <span th:if="${latestIrrigation.irrigationStatus == 'ON'}" class="badge badge-irrigation-on rounded-pill">
+                                                    <i class="fa-solid fa-circle-exclamation me-1"></i> <span th:text="${t['irrigation_needed']}">IRRIGATION REQUIRED</span>
+                                                </span>
+                                                <span th:if="${latestIrrigation.irrigationStatus == 'POSTPONE'}" class="badge badge-irrigation-postpone rounded-pill">
+                                                    <i class="fa-solid fa-cloud-showers-heavy me-1"></i> <span th:text="${t['irrigation_postponed']}">POSTPONE (RAIN EXPECTED)</span>
+                                                </span>
+                                                <span th:if="${latestIrrigation.irrigationStatus == 'OFF'}" class="badge badge-irrigation-off rounded-pill">
+                                                    <i class="fa-solid fa-circle-check me-1"></i> <span th:text="${t['irrigation_not_needed']}">IRRIGATION NOT REQUIRED</span>
+                                                </span>
+                                            </div>
+                                            <div class="text-muted small mt-2" th:text="${latestIrrigation.reason}">
+                                                Irrigation logic explanation
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3 text-center">
+                                        <div class="col-4">
+                                            <div class="p-2 border rounded-3 bg-white">
+                                                <div class="text-muted small">Dosage Required</div>
+                                                <div class="fs-5 fw-bold text-dark" th:text="${#numbers.formatDecimal(latestIrrigation.waterAmount, 0, 'COMMA', 0, 'POINT') + ' L'}">0 L</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 border rounded-3 bg-white">
+                                                <div class="text-muted small">Field Area</div>
+                                                <div class="fs-5 fw-bold text-dark" th:text="${activeField.area + ' Acres'}">2.5 Acres</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 border rounded-3 bg-white">
+                                                <div class="text-muted small">Groundwater Saved</div>
+                                                <div class="fs-5 fw-bold text-success" th:text="${#numbers.formatDecimal(latestIrrigation.waterSavedLitres, 0, 'COMMA', 0, 'POINT') + ' L'}">0 L</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div th:if="${latestIrrigation == null}" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-clock-rotate-left fs-3 mb-2"></i>
+                                    <p>No irrigation decisions recorded yet for this field.</p>
+                                    <a th:href="@{/smart-irrigation(fieldId=${activeField.id})}" class="btn btn-sm btn-agri">
+                                        Run Smart Irrigation Analysis
+                                    </a>
+                                </div>
+
+                                <!-- Water Conservation Summary Banner -->
+                                <div class="mt-4 p-3 bg-success-subtle border border-success-subtle rounded-3 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fa-solid fa-leaf text-success fs-4"></i>
+                                        <div>
+                                            <span class="fw-bold text-dark" th:text="${t['water_saved'] + ' Total:'}">Total Groundwater Conserved:</span>
+                                            <div class="small text-muted">Prevented water wastage by synchronizing with weather forecasts</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success fs-6 px-3 py-2 rounded-pill" th:text="${#numbers.formatDecimal(totalWaterSaved, 0, 'COMMA', 0, 'POINT') + ' Litres Saved'}">
+                                        37,500 Litres Saved
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Weather & Agro-Climate Insights -->
+                    <div class="col-lg-5">
+                        <div class="card h-100 shadow-sm border-0 overflow-hidden" th:if="${weather != null}">
+                            <div class="weather-gradient p-4 text-white">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="badge bg-white-50 text-white rounded-pill mb-1">
+                                            <i class="fa-solid fa-satellite me-1"></i> <span th:text="${weather.live ? 'Live OpenWeather' : 'Agro-Climate Meteorological Engine'}">Weather Engine</span>
+                                        </span>
+                                        <h4 class="fw-bold mb-0" th:text="${weather.location}">Warangal, Telangana</h4>
+                                        <div class="text-white-50 small" th:text="${weather.weatherCondition}">Clear / Sunny</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <h1 class="fw-bold display-5 mb-0" th:text="${weather.temperature + '°C'}">28.5°C</h1>
+                                        <div class="small text-white-50" th:text="${'Humidity: ' + weather.humidity + '%'}">Humidity: 65%</div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2 mt-3 pt-3 border-top border-white-50 text-center small">
+                                    <div class="col-4">
+                                        <div class="text-white-50">Rain Today</div>
+                                        <div class="fw-bold" th:text="${weather.rainfall + ' mm'}">0.0 mm</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-white-50">Forecast Rain</div>
+                                        <div class="fw-bold" th:text="${weather.forecastRainfall + ' mm'}">0.0 mm</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-white-50">Rain Chance</div>
+                                        <div class="fw-bold" th:text="${weather.rainProbability + '%'}">15%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5-Day Mini Forecast -->
+                            <div class="card-body p-3">
+                                <div class="fw-bold small text-muted text-uppercase mb-2">5-Day Agricultural Forecast</div>
+                                <div class="list-group list-group-flush small" th:if="${weather.forecastDays != null}">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center px-1 py-2" 
+                                         th:each="day, iter : ${weather.forecastDays}" th:if="${iter.index < 3}">
+                                        <span class="fw-semibold" th:text="${day.date}">Mon, Oct 12</span>
+                                        <span class="text-muted"><i class="fa-solid fa-cloud-sun me-1 text-warning"></i> <span th:text="${day.condition}">Sunny</span></span>
+                                        <span class="badge bg-light text-dark border" th:text="${day.temp + '°C'}">28.0°C</span>
+                                        <span class="text-info fw-bold"><i class="fa-solid fa-cloud-rain me-1"></i> <span th:text="${day.rainProb + '%'}">10%</span></span>
+                                    </div>
+                                </div>
+                                <div class="text-center mt-3">
+                                    <a th:href="@{/weather(fieldId=${activeField.id})}" class="small text-decoration-none fw-bold text-success">
+                                        View Extended Forecast & Rain Alerts <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- AI/ML Crop Recommendation Highlight -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-wheat-awn text-warning me-2"></i> <span th:text="${t['crop_rec']}">AI / ML Crop Recommendation</span> Snapshot</h5>
+                                    <p class="text-muted small mb-0">Multi-class Machine Learning classification based on soil chemistry, soil pH, and climatic patterns</p>
+                                </div>
+                                <a th:href="@{/crop-recommendation(fieldId=${activeField.id})}" class="btn btn-sm btn-agri">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> <span th:text="${t['get_crop_rec']}">Get Crop Recommendation</span>
+                                </a>
+                            </div>
+                            <div class="card-body p-4">
+                                <div th:if="${latestCrop != null}" class="recommendation-banner d-flex flex-column flex-md-row align-items-center gap-4">
+                                    <div class="crop-avatar">
+                                        <i class="fa-solid fa-seedling"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <span class="badge bg-success rounded-pill px-3 py-1">Top Matched Crop</span>
+                                            <h3 class="fw-bold text-success mb-0" th:text="${latestCrop.recommendedCrop}">Rice</h3>
+                                            <span class="badge bg-white text-dark border rounded-pill px-3 py-1 fw-bold">
+                                                <i class="fa-solid fa-chart-line text-primary me-1"></i> <span th:text="${latestCrop.confidence + '% Confidence'}">92.4% Confidence</span>
+                                            </span>
+                                        </div>
+                                        <p class="text-secondary mb-0 mt-2" th:text="${latestCrop.reason}">
+                                            Agronomic justification
+                                        </p>
+                                        <div class="small text-muted mt-2" th:if="${latestCrop.inputSummary != null}">
+                                            Parameters evaluated: <code th:text="${latestCrop.inputSummary}">N=80...</code>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <a th:href="@{/crop-recommendation(fieldId=${activeField.id})}" class="btn btn-outline-success">
+                                            Re-Evaluate Inputs
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div th:if="${latestCrop == null}" class="text-center py-4 text-muted">
+                                    <p>No crop recommendation calculated yet for this field.</p>
+                                    <a th:href="@{/crop-recommendation(fieldId=${activeField.id})}" class="btn btn-agri">
+                                        Run Crop Recommendation Model
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+
+    <script th:inline="javascript">
+    function triggerSensorSimulation(fieldId) {
+        const btn = document.getElementById('simulateSensorBtn');
+        const btnText = document.getElementById('btnText');
+        btn.disabled = true;
+        btnText.innerText = 'Simulating IoT Read...';
+
+        fetch('/api/sensors/simulate/' + fieldId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.soilMoisture !== undefined) {
+                // Update UI telemetry live
+                document.getElementById('valMoisture').innerText = data.soilMoisture + '%';
+                document.getElementById('valTemp').innerText = data.temperature + '°C';
+                document.getElementById('valHumidity').innerText = data.humidity + '%';
+                document.getElementById('valN').innerText = 'N: ' + Math.round(data.nitrogen);
+                document.getElementById('valP').innerText = 'P: ' + Math.round(data.phosphorus);
+                document.getElementById('valK').innerText = 'K: ' + Math.round(data.potassium);
+
+                const barM = document.getElementById('barMoisture');
+                barM.style.width = data.soilMoisture + '%';
+                const zoneM = document.getElementById('zoneMoisture');
+
+                if (data.soilMoisture < 25) {
+                    barM.className = 'progress-bar bg-danger';
+                    zoneM.innerHTML = '<span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> Low (Stress)</span>';
+                } else if (data.soilMoisture > 45) {
+                    barM.className = 'progress-bar bg-warning';
+                    zoneM.innerHTML = '<span class="text-warning fw-bold"><i class="fa-solid fa-circle-info"></i> High / Saturated</span>';
+                } else {
+                    barM.className = 'progress-bar bg-info';
+                    zoneM.innerHTML = '<span class="text-success fw-bold"><i class="fa-solid fa-circle-check"></i> Optimal</span>';
+                }
+
+                document.getElementById('barHumidity').style.width = data.humidity + '%';
+
+                btnText.innerText = 'Telemetry Updated!';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btnText.innerText = /*[[${t['simulate_sensors']}]]*/ 'Simulate IoT Sensor Reading';
+                }, 1200);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.disabled = false;
+            btnText.innerText = /*[[${t['simulate_sensors']}]]*/ 'Simulate IoT Sensor Reading';
+        });
+    }
+    </script>
+</body>
+</html>

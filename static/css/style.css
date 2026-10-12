@@ -1,0 +1,201 @@
+:root {
+    --agri-dark: #064e3b;
+    --agri-forest: #065f46;
+    --agri-primary: #059669;
+    --agri-accent: #10b981;
+    --agri-light: #ecfdf5;
+    --agri-gold: #f59e0b;
+    --agri-sky: #0284c7;
+    --border-radius: 14px;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Telugu', system-ui, -apple-system, sans-serif;
+    color: #1f2937;
+    background-color: #f8fafc;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+.bg-forest {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
+}
+
+.brand-icon {
+    font-size: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+}
+
+/* Card Styling */
+.card {
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+}
+
+/* Sensor metric cards */
+.metric-card {
+    border-left: 4px solid var(--agri-primary);
+    background: #ffffff;
+}
+
+.metric-card.moisture {
+    border-left-color: #0284c7;
+}
+
+.metric-card.temp {
+    border-left-color: #f97316;
+}
+
+.metric-card.humidity {
+    border-left-color: #06b6d4;
+}
+
+.metric-card.nutrients {
+    border-left-color: #10b981;
+}
+
+.metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+/* Status Badges */
+.badge-irrigation-on {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.badge-irrigation-off {
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.badge-irrigation-postpone {
+    background-color: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+/* Interactive Water Pump Animation */
+.pump-indicator {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+}
+
+.pump-active {
+    background-color: #ef4444;
+    color: white;
+    animation: pumpPulse 1.5s infinite;
+}
+
+.pump-idle {
+    background-color: #10b981;
+    color: white;
+}
+
+.pump-delay {
+    background-color: #f59e0b;
+    color: white;
+}
+
+@keyframes pumpPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 16px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* Buttons */
+.btn-agri {
+    background-color: var(--agri-primary);
+    color: white;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.6rem 1.25rem;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.btn-agri:hover {
+    background-color: var(--agri-forest);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Weather card */
+.weather-gradient {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: white;
+}
+
+/* Crop Recommendation Result Card */
+.recommendation-banner {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 2px solid #a7f3d0;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+}
+
+.crop-avatar {
+    width: 72px;
+    height: 72px;
+    background: #ffffff;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    color: var(--agri-forest);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}

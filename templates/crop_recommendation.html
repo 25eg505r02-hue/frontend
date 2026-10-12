@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${t['crop_rec']} + ' - ' + ${t['brand']})}"></head>
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    <div th:replace="~{fragments/layout :: navbar('crop')}"></div>
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <main class="flex-grow-1">
+        <div class="container-fluid px-lg-4 mt-3">
+            <!-- Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+                <div>
+                    <h3 class="fw-bold text-dark mb-1"><i class="fa-solid fa-wheat-awn text-warning me-2"></i> <span th:text="${t['crop_rec']}">Crop Recommendation</span> AI Engine</h3>
+                    <p class="text-muted small mb-0">AI / ML multi-variable classification evaluating soil chemical profile & agro-climatic indicators</p>
+                </div>
+                
+                <div class="btn-group" th:if="${fields != null and !fields.isEmpty()}">
+                    <button class="btn btn-outline-secondary dropdown-toggle bg-white" data-bs-toggle="dropdown">
+                        Select Field to Pre-populate
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li th:each="f : ${fields}">
+                            <a class="dropdown-item" th:href="@{/crop-recommendation(fieldId=${f.id})}" th:text="${f.fieldName}">Field</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Input Form -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark"><i class="fa-solid fa-sliders text-success me-2"></i> Input Agronomic Parameters</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Presets -->
+                            <div class="mb-3">
+                                <label class="form-label small text-muted fw-bold">Quick Climate / Soil Presets:</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm btn-light border" onclick="applyPreset('paddy')">🌾 Rice / Paddy Wet Soil</button>
+                                    <button type="button" class="btn btn-sm btn-light border" onclick="applyPreset('cotton')">🌱 Black Soil Cotton</button>
+                                    <button type="button" class="btn btn-sm btn-light border" onclick="applyPreset('pulses')">🫘 Dryland Chickpea</button>
+                                    <button type="button" class="btn btn-sm btn-light border" onclick="applyPreset('fruit')">🍎 Fruit Orchard</button>
+                                </div>
+                            </div>
+
+                            <form method="POST" th:action="@{/crop-recommendation/predict}" th:object="${predictionRequest}">
+                                <input type="hidden" th:field="*{fieldId}">
+
+                                <div class="row g-3">
+                                    <!-- Soil Nutrients -->
+                                    <div class="col-12"><h6 class="text-secondary fw-bold border-bottom pb-1 mb-2 mt-2">1. Soil Chemical Fertility (N-P-K)</h6></div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Nitrogen (N)</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" step="1" th:field="*{nitrogen}" id="inputN" class="form-control" required>
+                                            <span class="input-group-text">mg/kg</span>
+                                        </div>
+                                        <div class="form-text small">Range: 0 - 140</div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Phosphorus (P)</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" step="1" th:field="*{phosphorus}" id="inputP" class="form-control" required>
+                                            <span class="input-group-text">mg/kg</span>
+                                        </div>
+                                        <div class="form-text small">Range: 5 - 145</div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Potassium (K)</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" step="1" th:field="*{potassium}" id="inputK" class="form-control" required>
+                                            <span class="input-group-text">mg/kg</span>
+                                        </div>
+                                        <div class="form-text small">Range: 5 - 205</div>
+                                    </div>
+
+                                    <!-- Soil Type & pH -->
+                                    <div class="col-12"><h6 class="text-secondary fw-bold border-bottom pb-1 mb-2 mt-2">2. Soil Physical Properties</h6></div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Soil Type</label>
+                                        <select th:field="*{soilType}" id="inputSoil" class="form-select form-select-sm">
+                                            <option value="Loamy">Loamy (Balanced, fertile)</option>
+                                            <option value="Clayey">Clayey (Heavy, high water retention)</option>
+                                            <option value="Sandy">Sandy (Light, rapid drainage)</option>
+                                            <option value="Black">Black Soil / Regur (Ideal for Cotton)</option>
+                                            <option value="Red">Red Soil (High iron, moderate drainage)</option>
+                                            <option value="Alluvial">Alluvial (River basin, highly fertile)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Soil pH Value</label>
+                                        <input type="number" step="0.1" min="3.5" max="9.5" th:field="*{ph}" id="inputPH" class="form-control form-control-sm" required>
+                                        <div class="form-text small">Optimal: 5.5 - 7.5</div>
+                                    </div>
+
+                                    <!-- Weather Parameters -->
+                                    <div class="col-12"><h6 class="text-secondary fw-bold border-bottom pb-1 mb-2 mt-2">3. Climatic & Weather Conditions</h6></div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Temperature (°C)</label>
+                                        <input type="number" step="0.1" th:field="*{temperature}" id="inputTemp" class="form-control form-control-sm" required>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Relative Humidity (%)</label>
+                                        <input type="number" step="0.1" min="10" max="100" th:field="*{humidity}" id="inputHumidity" class="form-control form-control-sm" required>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Rainfall (mm)</label>
+                                        <input type="number" step="0.1" min="0" th:field="*{rainfall}" id="inputRainfall" class="form-control form-control-sm" required>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-agri w-100 py-2 fs-6 shadow-sm">
+                                        <i class="fa-solid fa-robot me-2"></i> Predict Best Suited Crop
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Card -->
+                <div class="col-lg-6">
+                    <div th:if="${prediction != null}" class="card shadow-sm border-0 mb-4 border-top border-5 border-success">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-success"><i class="fa-solid fa-circle-check me-2"></i> Model Recommendation Result</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                High Precision AI Match
+                            </span>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Main Recommended Crop -->
+                            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-4 mb-4">
+                                <div class="crop-avatar">
+                                    <i class="fa-solid fa-seedling"></i>
+                                </div>
+                                <div>
+                                    <span class="badge bg-success rounded-pill px-3 py-1 mb-1">Top Recommended Crop</span>
+                                    <h2 class="fw-bold text-dark mb-0" th:text="${prediction.primaryCrop}">Rice</h2>
+                                    <div class="text-primary fw-semibold mt-1">
+                                        <i class="fa-solid fa-chart-pie me-1"></i> Match Confidence: <span th:text="${prediction.primaryConfidence + '%'}">92.4%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Agronomic Rationale -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-lightbulb text-warning me-2"></i> Agronomic Rationale & Scientific Justification</h6>
+                                <div class="p-3 bg-success-subtle border border-success-subtle rounded-3 text-secondary small" style="line-height: 1.6;" th:text="${prediction.reason}">
+                                    Crop matching reason
+                                </div>
+                            </div>
+
+                            <!-- Top 3 Alternative Candidates -->
+                            <div class="mb-3" th:if="${prediction.topCrops != null}">
+                                <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-ranking-star text-info me-2"></i> Top Recommended Crop Candidates</h6>
+                                <div class="row g-2">
+                                    <div class="col-12" th:each="cand : ${prediction.topCrops}">
+                                        <div class="p-3 border rounded-3 bg-white d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold text-dark" th:text="${cand.crop}">Crop Name</div>
+                                                <div class="text-muted small" th:text="${cand.description}">Description</div>
+                                                <div class="mt-1 small">
+                                                    <span class="badge bg-light text-secondary border me-1" th:text="${'Water Need: ' + cand.waterNeed}">Water Need</span>
+                                                    <span class="badge bg-light text-secondary border" th:text="${'Preferred Soil: ' + cand.preferredSoil}">Soil</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-end ps-3">
+                                                <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill" th:text="${cand.confidence + '%'}">90%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Initial state guidance card -->
+                    <div th:if="${prediction == null}" class="card shadow-sm border-0 p-5 text-center">
+                        <i class="fa-solid fa-seedling text-success fs-1 mb-3"></i>
+                        <h4 class="fw-bold">Ready for AI/ML Inference</h4>
+                        <p class="text-muted">
+                            Adjust the soil nutrients (N, P, K), pH, and environmental factors on the left, or click one of the quick presets above, then click <strong>Predict Best Suited Crop</strong> to run the classification model.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+
+    <script>
+    function applyPreset(type) {
+        if (type === 'paddy') {
+            document.getElementById('inputN').value = 80;
+            document.getElementById('inputP').value = 45;
+            document.getElementById('inputK').value = 40;
+            document.getElementById('inputSoil').value = 'Clayey';
+            document.getElementById('inputPH').value = 6.2;
+            document.getElementById('inputTemp').value = 24.5;
+            document.getElementById('inputHumidity').value = 82;
+            document.getElementById('inputRainfall').value = 220;
+        } else if (type === 'cotton') {
+            document.getElementById('inputN').value = 115;
+            document.getElementById('inputP').value = 45;
+            document.getElementById('inputK').value = 20;
+            document.getElementById('inputSoil').value = 'Black';
+            document.getElementById('inputPH').value = 7.0;
+            document.getElementById('inputTemp').value = 25.0;
+            document.getElementById('inputHumidity').value = 78;
+            document.getElementById('inputRainfall').value = 80;
+        } else if (type === 'pulses') {
+            document.getElementById('inputN').value = 40;
+            document.getElementById('inputP').value = 65;
+            document.getElementById('inputK').value = 80;
+            document.getElementById('inputSoil').value = 'Loamy';
+            document.getElementById('inputPH').value = 7.2;
+            document.getElementById('inputTemp').value = 19.0;
+            document.getElementById('inputHumidity').value = 20;
+            document.getElementById('inputRainfall').value = 75;
+        } else if (type === 'fruit') {
+            document.getElementById('inputN').value = 20;
+            document.getElementById('inputP').value = 130;
+            document.getElementById('inputK').value = 200;
+            document.getElementById('inputSoil').value = 'Loamy';
+            document.getElementById('inputPH').value = 6.0;
+            document.getElementById('inputTemp').value = 22.0;
+            document.getElementById('inputHumidity').value = 80;
+            document.getElementById('inputRainfall').value = 70;
+        }
+    }
+    </script>
+</body>
+</html>

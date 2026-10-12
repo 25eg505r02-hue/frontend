@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} ?: ${t['brand'] + ' - ' + t['title']}">SmartAgri AI</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <nav th:fragment="navbar(activePage)" class="navbar navbar-expand-lg navbar-dark bg-forest sticky-top shadow-sm py-2">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand d-flex align-items-center gap-2" th:href="${currentFarmer != null ? '/dashboard' : '/login'}">
+                <span class="brand-icon"><i class="fa-solid fa-leaf text-warning"></i></span>
+                <div>
+                    <span class="fw-bold tracking-tight text-white" th:text="${t['brand']}">SmartAgri AI</span>
+                    <span class="badge bg-success-subtle text-white border border-light-subtle rounded-pill ms-2 d-none d-md-inline" style="font-size: 0.7rem;">Java AI/ML System</span>
+                </div>
+            </a>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3 gap-lg-1" th:if="${currentFarmer != null}">
+                    <li class="nav-item">
+                        <a class="nav-link px-3" th:classappend="${activePage == 'dashboard' ? 'active' : ''}" th:href="@{/dashboard}">
+                            <i class="fa-solid fa-gauge-high me-1"></i> <span th:text="${t['dashboard']}">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" th:classappend="${activePage == 'crop' ? 'active' : ''}" th:href="@{/crop-recommendation}">
+                            <i class="fa-solid fa-wheat-awn me-1"></i> <span th:text="${t['crop_rec']}">Crop Recommendation</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" th:classappend="${activePage == 'irrigation' ? 'active' : ''}" th:href="@{/smart-irrigation}">
+                            <i class="fa-solid fa-faucet-drip me-1"></i> <span th:text="${t['irrigation']}">Smart Irrigation</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" th:classappend="${activePage == 'weather' ? 'active' : ''}" th:href="@{/weather}">
+                            <i class="fa-solid fa-cloud-sun-rain me-1"></i> <span th:text="${t['weather']}">Weather Monitor</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" th:classappend="${activePage == 'fields' ? 'active' : ''}" th:href="@{/fields}">
+                            <i class="fa-solid fa-mountain-sun me-1"></i> <span th:text="${t['fields']}">My Fields</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3" th:classappend="${activePage == 'history' ? 'active' : ''}" th:href="@{/history}">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i> <span th:text="${t['history']}">Analytics & History</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Right controls: Language & Auth -->
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <!-- Language selector -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a th:href="@{/set-language/en}" class="btn btn-outline-light" th:classappend="${lang == 'en' ? 'active fw-bold' : ''}">EN</a>
+                        <a th:href="@{/set-language/te}" class="btn btn-outline-light" th:classappend="${lang == 'te' ? 'active fw-bold' : ''}">తెలుగు</a>
+                    </div>
+
+                    <div class="dropdown" th:if="${currentFarmer != null}">
+                        <button class="btn btn-sm btn-light rounded-pill dropdown-toggle d-flex align-items-center gap-2 py-1 px-3" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-user-circle text-success fs-6"></i>
+                            <span class="fw-semibold" th:text="${currentFarmer.name}">Farmer</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                            <li><h6 class="dropdown-header"><i class="fa-solid fa-location-dot me-1"></i> <span th:text="${currentFarmer.location}">Location</span></h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" th:href="@{/logout}"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i> <span th:text="${t['logout']}">Logout</span></a></li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex gap-2" th:if="${currentFarmer == null}">
+                        <a th:href="@{/login}" class="btn btn-sm btn-outline-light px-3" th:text="${t['login']}">Login</a>
+                        <a th:href="@{/register}" class="btn btn-sm btn-warning text-dark fw-bold px-3" th:text="${t['register']}">Register</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash message alerts -->
+    <div th:fragment="alerts" class="container-fluid px-lg-4 mt-3">
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
+            <i class="fa-solid fa-circle-check fs-5"></i>
+            <div th:text="${successMessage}">Operation successful!</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
+            <i class="fa-solid fa-circle-exclamation fs-5"></i>
+            <div th:text="${errorMessage}">An error occurred.</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer th:fragment="footer" class="bg-white border-top py-4 mt-5">
+        <div class="container-fluid px-lg-4 text-center text-muted small">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-md-start mb-2 mb-md-0">
+                    <span class="fw-semibold text-dark">🌱 Smart Irrigation & Weather-Based Crop Recommendation System</span>
+                    <div>Built with Java 21, Spring Boot, Artificial Intelligence & Machine Learning (AI/ML)</div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <span class="badge bg-light text-dark border me-1"><i class="fa-solid fa-database text-success me-1"></i> JPA & H2 Engine</span>
+                    <span class="badge bg-light text-dark border me-1"><i class="fa-solid fa-robot text-primary me-1"></i> Multi-Class ML Model</span>
+                    <span class="badge bg-light text-dark border"><i class="fa-solid fa-language text-warning me-1"></i> Multi-Lingual</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <div th:fragment="scripts">
+        <!-- Bootstrap 5 Bundle JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Custom JS -->
+        <script th:src="@{/js/main.js}"></script>
+    </div>
+
+</body>
+</html>

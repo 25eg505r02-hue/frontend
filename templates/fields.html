@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${t['fields']} + ' - ' + ${t['brand']})}"></head>
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    <div th:replace="~{fragments/layout :: navbar('fields')}"></div>
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <main class="flex-grow-1">
+        <div class="container-fluid px-lg-4 mt-3">
+            <div class="row g-4">
+                <!-- Register Field Form -->
+                <div class="col-lg-4">
+                    <div class="card shadow-sm border-0 sticky-top" style="top: 80px;">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-plus-circle text-success me-2"></i> Register New Plot</h5>
+                            <p class="text-muted small mb-0">Add land coordinates and soil properties</p>
+                        </div>
+                        <div class="card-body p-4">
+                            <form method="POST" th:action="@{/fields/add}">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Plot Name *</label>
+                                    <input type="text" name="fieldName" class="form-control" placeholder="e.g. South Paddy Field" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Area in Acres *</label>
+                                    <input type="number" step="0.1" name="area" class="form-control" value="2.5" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Soil Type *</label>
+                                    <select name="soilType" class="form-select" required>
+                                        <option value="Clayey">Clayey (Heavy, high water retention)</option>
+                                        <option value="Loamy" selected>Loamy (Balanced, fertile)</option>
+                                        <option value="Sandy">Sandy (Light, rapid drainage)</option>
+                                        <option value="Black">Black Soil / Regur (Ideal for Cotton)</option>
+                                        <option value="Red">Red Soil (High iron, moderate drainage)</option>
+                                        <option value="Alluvial">Alluvial (River basin, highly fertile)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Soil pH *</label>
+                                    <input type="number" step="0.1" min="3.5" max="9.5" name="soilPh" class="form-control" value="6.5" required>
+                                    <div class="form-text small">Standard range: 5.5 - 7.5</div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label small fw-semibold">Field Location *</label>
+                                    <input type="text" name="location" class="form-control" th:value="${currentFarmer != null ? currentFarmer.location : 'Warangal, Telangana'}" required>
+                                </div>
+                                <button type="submit" class="btn btn-agri w-100 py-2">
+                                    <i class="fa-solid fa-save me-1"></i> Register Plot
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field List Table -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold mb-0 text-dark">
+                                    <i class="fa-solid fa-mountain-sun text-primary me-2"></i> 
+                                    <span th:text="${t['fields']}">My Fields</span> 
+                                    (<span th:text="${fields != null ? fields.size() : 0}">0</span>)
+                                </h5>
+                                <p class="text-muted small mb-0">Managed agricultural plots under <span class="fw-semibold text-dark" th:text="${currentFarmer != null ? currentFarmer.name : 'Farmer'}">Farmer</span></p>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Plot ID & Name</th>
+                                            <th>Area</th>
+                                            <th>Soil Profile</th>
+                                            <th>Location</th>
+                                            <th>Created On</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:if="${fields == null or fields.isEmpty()}">
+                                            <td colspan="6" class="text-center py-4 text-muted">
+                                                No agricultural fields registered yet. Register your first plot using the form.
+                                            </td>
+                                        </tr>
+                                        <tr th:each="f : ${fields}">
+                                            <td class="ps-4">
+                                                <div class="fw-bold text-dark" th:text="${'#' + f.id + ' - ' + f.fieldName}">#1 - Field Name</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border px-2 py-1 fs-6" th:text="${f.area + ' ac'}">2.5 ac</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold text-secondary" th:text="${f.soilType}">Loamy</div>
+                                                <div class="small text-muted" th:text="${'pH: ' + f.soilPh}">pH: 6.5</div>
+                                            </td>
+                                            <td>
+                                                <small><i class="fa-solid fa-location-dot text-danger me-1"></i> <span th:text="${f.location}">Location</span></small>
+                                            </td>
+                                            <td class="small text-muted" th:text="${#temporals.format(f.createdAt, 'yyyy-MM-dd')}">
+                                                2026-10-11
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                <div class="btn-group btn-group-sm">
+                                                    <a th:href="@{/dashboard(fieldId=${f.id})}" class="btn btn-outline-primary" title="View Telemetry">
+                                                        <i class="fa-solid fa-gauge-high"></i>
+                                                    </a>
+                                                    <a th:href="@{/smart-irrigation(fieldId=${f.id})}" class="btn btn-outline-info" title="Irrigation">
+                                                        <i class="fa-solid fa-faucet-drip"></i>
+                                                    </a>
+                                                    <a th:href="@{/crop-recommendation(fieldId=${f.id})}" class="btn btn-outline-success" title="Crop Rec">
+                                                        <i class="fa-solid fa-wheat-awn"></i>
+                                                    </a>
+                                                    <form method="POST" th:action="@{/fields/delete/{id}(id=${f.id})}" class="d-inline" onsubmit="return confirm('Delete this field?');">
+                                                        <button type="submit" class="btn btn-outline-danger" title="Delete Field">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

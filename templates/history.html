@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${t['history']} + ' - ' + ${t['brand']})}"></head>
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    <div th:replace="~{fragments/layout :: navbar('history')}"></div>
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <main class="flex-grow-1">
+        <div class="container-fluid px-lg-4 mt-3">
+            <!-- Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+                <div>
+                    <h3 class="fw-bold text-dark mb-1"><i class="fa-solid fa-clock-rotate-left text-success me-2"></i> <span th:text="${t['history']}">Analytics & History</span></h3>
+                    <p class="text-muted small mb-0">Audit logs of AI crop selections, irrigation pump triggers, and weather-driven postponements</p>
+                </div>
+
+                <div class="btn-group" th:if="${fields != null and !fields.isEmpty()}">
+                    <button class="btn btn-outline-secondary dropdown-toggle bg-white" data-bs-toggle="dropdown">
+                        Filter by Field
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a class="dropdown-item" th:href="@{/history}">All Fields</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li th:each="f : ${fields}">
+                            <a class="dropdown-item" th:href="@{/history(fieldId=${f.id})}" th:text="${f.fieldName}">Field</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <div class="card-header bg-white border-0 pb-0">
+                            <h6 class="fw-bold text-dark"><i class="fa-solid fa-chart-pie text-primary me-2"></i> Irrigation Decision Breakdown</h6>
+                        </div>
+                        <div class="card-body d-flex align-items-center justify-content-center" style="max-height: 260px;">
+                            <canvas id="irrigChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <div class="card-header bg-white border-0 pb-0">
+                            <h6 class="fw-bold text-dark"><i class="fa-solid fa-chart-simple text-success me-2"></i> Recommended Crops Distribution</h6>
+                        </div>
+                        <div class="card-body d-flex align-items-center justify-content-center" style="max-height: 260px;">
+                            <canvas id="cropChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-pills mb-3" id="historyTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active px-4" id="irrig-tab" data-bs-toggle="pill" data-bs-target="#irrigTabPane">
+                        <i class="fa-solid fa-faucet-drip me-1"></i> Smart Irrigation Logs (<span th:text="${irrigationHistory != null ? irrigationHistory.size() : 0}">0</span>)
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link px-4" id="crop-tab" data-bs-toggle="pill" data-bs-target="#cropTabPane">
+                        <i class="fa-solid fa-wheat-awn me-1"></i> Crop Recommendation Logs (<span th:text="${cropHistory != null ? cropHistory.size() : 0}">0</span>)
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Contents -->
+            <div class="tab-content" id="historyTabContent">
+                <!-- Irrigation Tab -->
+                <div class="tab-pane fade show active" id="irrigTabPane">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">ID & Field</th>
+                                            <th>Date & Timestamp</th>
+                                            <th>Irrigation Decision</th>
+                                            <th>Water Volume</th>
+                                            <th>Water Saved</th>
+                                            <th>Agronomic Rationale</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:if="${irrigationHistory == null or irrigationHistory.isEmpty()}">
+                                            <td colspan="6" class="text-center py-4 text-muted">No irrigation records found.</td>
+                                        </tr>
+                                        <tr th:each="row : ${irrigationHistory}">
+                                            <td class="ps-4">
+                                                <div class="fw-bold text-dark" th:text="${'#' + row.id}">#1</div>
+                                                <div class="small text-muted" th:text="${row.field != null ? row.field.fieldName : 'General Farm'}">Field</div>
+                                            </td>
+                                            <td class="small text-muted text-nowrap" th:text="${#temporals.format(row.recommendationDate, 'yyyy-MM-dd HH:mm')}">
+                                                2026-10-11 12:00
+                                            </td>
+                                            <td>
+                                                <span th:if="${row.irrigationStatus == 'ON'}" class="badge badge-irrigation-on rounded-pill">
+                                                    <i class="fa-solid fa-water me-1"></i> PUMP ON
+                                                </span>
+                                                <span th:if="${row.irrigationStatus == 'POSTPONE'}" class="badge badge-irrigation-postpone rounded-pill">
+                                                    <i class="fa-solid fa-cloud-showers-heavy me-1"></i> POSTPONE (RAIN)
+                                                </span>
+                                                <span th:if="${row.irrigationStatus == 'OFF'}" class="badge badge-irrigation-off rounded-pill">
+                                                    <i class="fa-solid fa-power-off me-1"></i> PUMP OFF
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark" th:text="${#numbers.formatDecimal(row.waterAmount, 0, 'COMMA', 0, 'POINT') + ' L'}">0 L</div>
+                                                <div class="small text-muted" th:if="${row.pumpDurationMinutes > 0}" th:text="${row.pumpDurationMinutes + ' mins'}">0 mins</div>
+                                            </td>
+                                            <td>
+                                                <span class="text-success fw-bold" th:text="${#numbers.formatDecimal(row.waterSavedLitres, 0, 'COMMA', 0, 'POINT') + ' L'}">0 L</span>
+                                            </td>
+                                            <td class="small text-secondary" style="max-width: 400px;" th:text="${row.reason}">
+                                                Reason
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crop Recommendation Tab -->
+                <div class="tab-pane fade" id="cropTabPane">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">ID & Field</th>
+                                            <th>Date & Timestamp</th>
+                                            <th>Recommended Crop</th>
+                                            <th>Confidence</th>
+                                            <th>Model Rationale</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:if="${cropHistory == null or cropHistory.isEmpty()}">
+                                            <td colspan="5" class="text-center py-4 text-muted">No crop recommendation records found.</td>
+                                        </tr>
+                                        <tr th:each="row : ${cropHistory}">
+                                            <td class="ps-4">
+                                                <div class="fw-bold text-dark" th:text="${'#' + row.id}">#1</div>
+                                                <div class="small text-muted" th:text="${row.field != null ? row.field.fieldName : 'General Farm'}">Field</div>
+                                            </td>
+                                            <td class="small text-muted text-nowrap" th:text="${#temporals.format(row.recommendationDate, 'yyyy-MM-dd HH:mm')}">
+                                                2026-10-11 12:00
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fs-6 fw-bold">
+                                                    <i class="fa-solid fa-seedling me-1"></i> <span th:text="${row.recommendedCrop}">Crop</span>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-primary" th:text="${row.confidence + '%'}">90%</div>
+                                            </td>
+                                            <td class="small text-secondary" style="max-width: 450px;">
+                                                <div th:text="${row.reason}">Rationale</div>
+                                                <div class="mt-1 small text-muted" th:if="${row.inputSummary != null}">
+                                                    <code th:text="${row.inputSummary}">Inputs</code>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Collect data from rendered table rows
+        const irrigRows = document.querySelectorAll('#irrigTabPane tbody tr');
+        let countOn = 0, countPostpone = 0, countOff = 0;
+        irrigRows.forEach(row => {
+            const text = row.innerText;
+            if (text.includes('PUMP ON')) countOn++;
+            else if (text.includes('POSTPONE')) countPostpone++;
+            else if (text.includes('PUMP OFF')) countOff++;
+        });
+
+        const ctx1 = document.getElementById('irrigChart');
+        if (ctx1) {
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['PUMP ON (Deficit)', 'POSTPONE (Rain Forecast)', 'PUMP OFF (Sufficient)'],
+                    datasets: [{
+                        data: [Math.max(1, countOn), Math.max(1, countPostpone), Math.max(1, countOff)],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        const cropRows = document.querySelectorAll('#cropTabPane tbody tr');
+        const cropCounts = {};
+        cropRows.forEach(row => {
+            const badge = row.querySelector('.badge span');
+            if (badge) {
+                const cropName = badge.innerText.trim();
+                cropCounts[cropName] = (cropCounts[cropName] || 0) + 1;
+            }
+        });
+
+        const cropLabels = Object.keys(cropCounts);
+        const cropValues = Object.values(cropCounts);
+
+        const ctx2 = document.getElementById('cropChart');
+        if (ctx2) {
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: cropLabels.length > 0 ? cropLabels : ['Rice', 'Maize', 'Cotton'],
+                    datasets: [{
+                        label: 'Recommendation Count',
+                        data: cropValues.length > 0 ? cropValues : [3, 2, 1],
+                        backgroundColor: '#059669',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>
